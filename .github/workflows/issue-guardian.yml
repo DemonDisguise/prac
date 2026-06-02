@@ -1,0 +1,39 @@
+name: Issue Guardian
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  protect-issues:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const closer = context.payload.sender.login;
+            const author = issue.user.login;
+
+            // Put your GitHub username here
+            const admin = "DemonDisguise";
+
+            if (closer !== author && closer !== admin) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: "open"
+              });
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `@${closer} only the issue author or repository maintainer may close this issue. Reopening automatically.`
+              });
+            }
