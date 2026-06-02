@@ -8,4 +8,3 @@ def solve(n: int) -> int:
     Returns:
         int: factorial of the number
     """
-    pass
