@@ -12,4 +12,9 @@ def solve(n: int) -> int:
         TypeError: if n is not an integer
         ValueError: if n is negative
     """
-    pass
+    try:
+        if n == 0 or n == 1:
+            return 1
+        return solve(n)*solve(n-1)
+    except Exception as e:
+        return f"Some Error: {e}"
