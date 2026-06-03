@@ -10,9 +10,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check source branch
+      - name: Validate source branch
         run: |
-          if [ "${{ github.head_ref }}" != "development" ]; then
-            echo "Only development can be merged into main."
+          echo "Base branch: ${{ github.base_ref }}"
+          echo "Source branch: ${{ github.head_ref }}"
+
+          if [ "${{ github.base_ref }}" != "main" ]; then
+            echo "This workflow only applies to PRs targeting main."
             exit 1
           fi
+
+          echo "Checking source branch rules..."
+
+          if [ "${{ github.head_ref }}" != "development" ]; then
+            echo "Only development → main is allowed."
+            exit 1
+          fi
+
+          echo "Valid PR: development → main"
