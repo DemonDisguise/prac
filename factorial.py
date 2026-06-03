@@ -17,4 +17,4 @@ def solve(n: int) -> int:
             return 1
         return solve(n)*solve(n-1)
     except Exception as e:
-        return f"Some Error: {e}"
+        return e
