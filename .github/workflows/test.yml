@@ -1,0 +1,63 @@
+name: Smart Dynamic Tests
+
+on:
+  pull_request:
+    branches:
+      - development
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Get changed Python files
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            pyfiles:
+              - '**.py'
+
+      - name: Run dynamic tests
+        if: steps.changes.outputs.pyfiles == 'true'
+        run: |
+          echo "Detecting changed files..."
+
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep ".py" || true)
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          for file in $CHANGED_FILES
+          do
+            # Skip test files
+            if [[ $file == tests/* ]]; then
+              continue
+            fi
+
+            filename=$(basename "$file" .py)
+            testfile="tests/test_${filename}.py"
+
+            if [ -f "$testfile" ]; then
+              echo "Running $testfile"
+              pytest "$testfile" -v
+            else
+              echo "No test found for $file, skipping"
+            fi
+          done
+
+      - name: Fallback full test run (safety)
+        if: steps.changes.outputs.pyfiles == 'false'
+        run: pytest -v

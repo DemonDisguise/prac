@@ -1,11 +1,15 @@
-# Complete this function
 def solve(n: int) -> int:
-    """This function returns factorial of the number
+    """
+    This function returns the factorial of a number.
 
     Args:
-        n (int): number
+        n (int): Non-negative integer input
 
     Returns:
-        int: factorial of the number
+        int: factorial of n
+
+    Raises:
+        TypeError: if n is not an integer
+        ValueError: if n is negative
     """
     pass
