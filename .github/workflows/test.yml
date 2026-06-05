@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout PR code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -24,6 +24,9 @@ jobs:
       - name: Install pytest
         run: pip install pytest
 
+      - name: Add repo root to PYTHONPATH
+        run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+
       - name: Get changed Python files
         id: changes
         uses: dorny/paths-filter@v3
@@ -32,7 +35,7 @@ jobs:
             pyfiles:
               - '**/*.py'
 
-      - name: Run dynamic tests
+      - name: Restore tests from base branch and run matching tests
         if: steps.changes.outputs.pyfiles == 'true'
         run: |
           echo "PR base branch: ${{ github.base_ref }}"
@@ -46,11 +49,16 @@ jobs:
           echo "Changed Python files:"
           echo "$CHANGED_FILES"
 
+          # Replace tests directory with tests from base branch
+          rm -rf tests
+
+          git checkout origin/${{ github.base_ref }} -- tests
+
           TESTS_RUN=false
 
           for file in $CHANGED_FILES
           do
-            # Skip test files themselves
+            # Ignore test files changed in PR
             if [[ $file == tests/* ]]; then
               continue
             fi
@@ -60,7 +68,7 @@ jobs:
 
             if [ -f "$testfile" ]; then
               echo "Running $testfile"
-              pytest "$testfile" -v
+              python -m pytest "$testfile" -v
               TESTS_RUN=true
             else
               echo "No test found for $file"
@@ -69,8 +77,14 @@ jobs:
 
           if [ "$TESTS_RUN" = false ]; then
             echo "No matching tests found."
+            exit 0
           fi
 
       - name: Fallback full test run
         if: steps.changes.outputs.pyfiles == 'false'
-        run: pytest -v
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          rm -rf tests
+          git checkout origin/${{ github.base_ref }} -- tests
+
+          python -m pytest -v
