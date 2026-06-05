@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,21 +30,27 @@ jobs:
         with:
           filters: |
             pyfiles:
-              - '**.py'
+              - '**/*.py'
 
       - name: Run dynamic tests
         if: steps.changes.outputs.pyfiles == 'true'
         run: |
-          echo "Detecting changed files..."
+          echo "PR base branch: ${{ github.base_ref }}"
 
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep ".py" || true)
+          git fetch origin ${{ github.base_ref }}
 
-          echo "Changed files:"
+          CHANGED_FILES=$(git diff --name-only \
+            origin/${{ github.base_ref }}...HEAD \
+            | grep '\.py$' || true)
+
+          echo "Changed Python files:"
           echo "$CHANGED_FILES"
+
+          TESTS_RUN=false
 
           for file in $CHANGED_FILES
           do
-            # Skip test files
+            # Skip test files themselves
             if [[ $file == tests/* ]]; then
               continue
             fi
@@ -53,11 +61,16 @@ jobs:
             if [ -f "$testfile" ]; then
               echo "Running $testfile"
               pytest "$testfile" -v
+              TESTS_RUN=true
             else
-              echo "No test found for $file, skipping"
+              echo "No test found for $file"
             fi
           done
 
-      - name: Fallback full test run (safety)
+          if [ "$TESTS_RUN" = false ]; then
+            echo "No matching tests found."
+          fi
+
+      - name: Fallback full test run
         if: steps.changes.outputs.pyfiles == 'false'
         run: pytest -v
